@@ -16,7 +16,8 @@ var connection = mysql.createConnection({
     database: "bamazon_DB"
 });
 
-var product = [];
+var products = [];
+var total = 0;
 
 // connect to the mysql server and sql database
 connection.connect(function (err) {
@@ -33,15 +34,16 @@ function start() {
     inquirer
         .prompt([{
                 productId: "product ID",
-                type: "rawlist",
+                type: "input",
                 choices: function () {
                     var choiceArray = [];
-                    for (var i = 0; i < product.length; i++) {
-                        choiceArray.push(products[i].item_name);
+                    for (var i = 0; i < products.length; i++) {
+                        choiceArray.push(products[i].product_name);
                     }
                     return choiceArray;
                 },
-                message: "Enter ID of the product you would like to purchase"
+                message: "Enter ID of the product you would like to purchase",
+                name: "product_id"
             },
             {
                 name: "quantity",
@@ -50,24 +52,35 @@ function start() {
             }
 
         ])
-        .then(function (answer) {
-                console.log(answers);
-                var orderQuantity = parseInt(answers.quantity);
-                var orderID = answers.whatID;
+        .then(function (answers) {
+            // console.log('answers is '+ JSON.stringify(answers));
+            // console.log('products are'+ JSON.stringify(products))
+            var orderQuantity = parseInt(answers.quantity);
+            var orderID = answers.product_id;
+            // console.log(orderID)
 
-                for (var j = 0; j < products.length; j++) {
-                    if (orderID === products[j].item_name) {
-                        if (products[j].stock_quantity < orderQuantity) {
-                            console.log("Insufficient Quantity!")
+            for (var j = 0; j < products.length; j++) {
+                if (parseInt(orderID) === parseInt(products[j].item_id)) {
+                    console.log(orderQuantity)
+                    if (parseInt(products[j].stock_quantity) < parseInt(orderQuantity)) {
+                        console.log("Insufficient Quantity!")
+                        console.log("Order not placed")
+                        console.log("Please try another quantity!");
+                        start();
 
-                        } else
-                            updateInventory(products[j].item_name, products.stock_quantiy - orderQuantity)
-                    };
-                }
+                    } else {
+                        console.log('worked');
+                        updatePrice(products[j].price, orderQuantity);
+                        updateInventory(products[j].item_id, products[j].stock_quantity - orderQuantity)
+                    }
+                };
             }
-        }
-)
+        })
 }
+
+
+
+
 // function to handle posting new items up for auction
 function marketProducts() {
     connection.query("SELECT * FROM products", function (err, results) {
@@ -76,14 +89,24 @@ function marketProducts() {
         console.log("name: ", "product id: ", "price: ", "quantity: ");
         for (var i = 0; i < results.length; i++) {
             var product = results[i];
-            console.log(product.item_name + "  " + product.item_id + "  " + product.price + "  " + product.stock_quantity)
+            console.log(product.product_name + "  " + product.item_id + "  " + product.price + "  " + product.stock_quantity)
         }
         start();
 
     })
 }
 
-function updateInventory(item_name, updatedQuantity) {
+function updateInventory(id, updatedQuantity) {
+    console.log('Updating inventory...');
+    console.log('......................');
+    console.log('INVENTORY UPDATED!');
+    connection.query("UPDATE `products` SET `stock_quantity` = '" + updatedQuantity + "' WHERE `item_id` = '" + id + "'");
+    marketProducts();
 
 
+}
+
+function updatePrice(price, quantity) {
+    total += price * quantity;
+    console.log("Total: " + total);
 }
